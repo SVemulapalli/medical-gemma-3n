@@ -64,14 +64,14 @@ class _FirstAidGuideScreenState extends State<FirstAidGuideScreen>
   }
 
   Future<void> _initializeSession() async {
-    print('🚀 FIRST AID: Starting session initialization...');
+    print('Starting session initialization...');
     setState(() {
       _isLoading = true;
     });
 
     try {
       // Create session using global model service
-      print('📝 FIRST AID: Creating session...');
+      print('Creating session...');
       _session = await _gemmaService.createSession(
         temperature: 0.7,
         randomSeed: 1,
@@ -84,9 +84,9 @@ class _FirstAidGuideScreenState extends State<FirstAidGuideScreen>
           _isLoading = false;
         });
       }
-      print('✅ FIRST AID: Session initialization completed successfully!');
+      print('Session initialization completed successfully!');
     } catch (e) {
-      print('💥 FIRST AID: Session initialization failed: $e');
+      print('Session initialization failed: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -106,25 +106,25 @@ class _FirstAidGuideScreenState extends State<FirstAidGuideScreen>
   }
 
   Future<void> _handleAnswer(String answerId, [int? aiSeverity]) async {
-    print('🔄 FIRST AID: Handle answer started - ID: $answerId');
+    print('Handle answer started - ID: $answerId');
     setState(() {
       _isLoading = true;
     });
 
     // Record the response
-    print('📝 FIRST AID: Recording response...');
+    print('Recording response...');
     if (_triageService.isInInitialPhase) {
-      print('📋 FIRST AID: Recording initial phase response');
+      print('Recording initial phase response');
       _triageService.recordResponse(answerId);
     } else if (_aiGeneratedQuestion != null) {
-      print('📋 FIRST AID: Recording AI-generated response');
+      print('Recording AI-generated response');
       final answerText = _aiGeneratedAnswers![int.parse(answerId)];
       _triageService.recordAIResponse(_aiGeneratedQuestion!, answerText, aiSeverity ?? 2);
     }
 
     // Check if we need to continue with initial questions
     if (_triageService.isInInitialPhase) {
-      print('➡️ FIRST AID: Still in initial phase, moving to next question');
+      print('Still in initial phase, moving to next question');
       setState(() {
         _currentQuestion = _triageService.currentQuestion;
         _isLoading = false;
@@ -139,11 +139,11 @@ class _FirstAidGuideScreenState extends State<FirstAidGuideScreen>
     
     if (totalResponses >= maxQuestions) {
       // Reached maximum questions, open chat with summary
-      print('🎯 FIRST AID: Maximum questions reached, opening chat with summary...');
+      print('Maximum questions reached, opening chat with summary...');
       await _openChatWithSummary();
     } else if (totalResponses >= 3) {
       // After 3+ questions, let AI agent decide if more info needed
-      print('🤖 FIRST AID: AI agent evaluating if more info is needed...');
+      print('AI agent evaluating if more info is needed...');
       await _evaluateWithAIAgent();
     }
   }
@@ -157,7 +157,7 @@ class _FirstAidGuideScreenState extends State<FirstAidGuideScreen>
 
   Future<void> _evaluateWithAIAgent() async {
     if (!_isModelReady || _session == null) {
-      print('❌ FIRST AID: Session not ready, reinitializing...');
+      print('Session not ready, reinitializing...');
       await _initializeSession();
       if (!_isModelReady || _session == null) {
         throw Exception('CRITICAL ERROR: AI agent evaluation impossible - Session not initialized');
@@ -165,7 +165,7 @@ class _FirstAidGuideScreenState extends State<FirstAidGuideScreen>
     }
 
     try {
-      print('🤖 FIRST AID: AI agent evaluating patient information...');
+      print('AI agent evaluating patient information...');
       
       final prompt = '''${_triageService.responses.length} questions asked so far. 
 
@@ -182,18 +182,18 @@ Do I have SUFFICIENT DETAILED information for a thorough medical assessment?
 
 Reply ONLY: true OR false''';
 
-      print('📤 FIRST AID: Sending evaluation prompt...');
+      print('Sending evaluation prompt...');
       final message = flutter_gemma.Message.text(text: prompt, isUser: true);
       await _session!.addQueryChunk(message);
       
       final response = await _session!.getResponse().timeout(
         Duration(seconds: 15),
         onTimeout: () {
-          print('💥 FIRST AID: EVALUATION TIMEOUT - opening chat');
+          print('EVALUATION TIMEOUT - opening chat');
           return 'true'; // Force chat opening on timeout
         },
       );
-      print('✅ FIRST AID: AI agent decision received: $response');
+      print('AI agent decision received: $response');
       
       // Parse simple true/false response - be more strict
       final cleanResponse = response.trim().toLowerCase();
@@ -205,20 +205,20 @@ Reply ONLY: true OR false''';
       final reachedMaximum = _triageService.responses.length >= 9;
       final sufficientInfo = (explicitlyTrue && hasMinimumQuestions) || reachedMaximum;
       
-      print('🎯 FIRST AID: AI agent decision - sufficient_info: $sufficientInfo');
+      print('AI agent decision - sufficient_info: $sufficientInfo');
       
       if (sufficientInfo) {
         // AI agent says we have enough info, open chat
-        print('✅ FIRST AID: AI agent says sufficient info, opening chat...');
+        print('AI agent says sufficient info, opening chat...');
         await _openChatWithSummary();
       } else {
         // AI agent wants more info, call question generation agent
-        print('❓ FIRST AID: AI agent wants more info, calling question generator...');
+        print('AI agent wants more info, calling question generator...');
         await _generateAIQuestion();
       }
       
     } catch (e) {
-      print('💥 FIRST AID: Error in AI agent evaluation: $e');
+      print('Error in AI agent evaluation: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -231,7 +231,7 @@ Reply ONLY: true OR false''';
 
   Future<void> _generateAIQuestion() async {
     if (!_isModelReady || _session == null) {
-      print('❌ FIRST AID: Session not ready, reinitializing...');
+      print('Session not ready, reinitializing...');
       await _initializeSession();
       if (!_isModelReady || _session == null) {
         throw Exception('CRITICAL ERROR: AI question generation impossible - Session not initialized');
@@ -239,7 +239,7 @@ Reply ONLY: true OR false''';
     }
 
     try {
-      print('🤖 FIRST AID: Question generation agent creating next question...');
+      print('Question generation agent creating next question...');
       
       // Get detailed history of questions and answers
       final responses = _triageService.responses;
@@ -259,34 +259,34 @@ Generate ONE medical follow-up question based on above conversation.
 JSON:
 {"question": "Next medical question?", "answers": ["Option 1", "Option 2", "Option 3", "Option 4"]}''';
 
-      print('📤 FIRST AID: Sending question generation prompt to AI...');
+      print('Sending question generation prompt to AI...');
       final message = flutter_gemma.Message.text(text: prompt, isUser: true);
       await _session!.addQueryChunk(message);
       
       final response = await _session!.getResponse().timeout(
         Duration(seconds: 30),
         onTimeout: () {
-          print('💥 FIRST AID: QUESTION GENERATION TIMEOUT - opening chat');
+          print('QUESTION GENERATION TIMEOUT - opening chat');
           throw Exception('Question generation timeout - opening chat');
         },
       );
-      print('✅ FIRST AID: Question generation agent response received: $response');
-      print('🔍 FIRST AID: Full response length: ${response.length}');
-      print('🔍 FIRST AID: Response content: "${response.replaceAll('\n', '\\n')}"');
+      print('Question generation agent response received: $response');
+      print('Full response length: ${response.length}');
+      print('Response content: "${response.replaceAll('\n', '\\n')}"');
       
       // Parse JSON response with better error handling
       final jsonStart = response.indexOf('{');
       final jsonEnd = response.lastIndexOf('}') + 1;
       
-      print('🔍 FIRST AID: JSON start: $jsonStart, end: $jsonEnd');
+      print('JSON start: $jsonStart, end: $jsonEnd');
       
       if (jsonStart != -1 && jsonEnd > jsonStart) {
         final jsonStr = response.substring(jsonStart, jsonEnd);
-        print('🔍 FIRST AID: Extracted JSON: $jsonStr');
+        print('Extracted JSON: $jsonStr');
         
         try {
           final parsed = json.decode(jsonStr);
-          print('🔍 FIRST AID: Parsed JSON: $parsed');
+          print('Parsed JSON: $parsed');
           
           // Validate the parsed JSON has required fields
           if (parsed is Map && parsed.containsKey('question') && parsed.containsKey('answers')) {
@@ -306,7 +306,7 @@ JSON:
             }
           }
         } catch (jsonError) {
-          print('💥 FIRST AID: JSON decode error: $jsonError');
+          print('JSON decode error: $jsonError');
         }
       }
       
@@ -314,16 +314,16 @@ JSON:
       throw Exception('CRITICAL ERROR: Question generation agent returned invalid JSON response');
       
     } catch (e) {
-      print('💥 FIRST AID: Error in question generation agent: $e');
+      print('Error in question generation agent: $e');
       
       // If question generation fails, just open chat with what we have
-      print('🔄 FIRST AID: Question generation failed, opening chat...');
+      print('Question generation failed, opening chat...');
       await _openChatWithSummary();
     }
   }
 
   Future<void> _openChatWithSummary() async {
-    print('💬 FIRST AID: Creating summary for chat...');
+    print('Creating summary for chat...');
     
     // Create summary of questions and answers
     final responses = _triageService.responses;
@@ -338,7 +338,7 @@ JSON:
     }
     
     final summary = summaryBuffer.toString();
-    print('📋 FIRST AID: Summary created: $summary');
+    print('Summary created: $summary');
     
     // Clean up resources before navigating
     await _cleanupResources();
@@ -355,19 +355,19 @@ JSON:
   }
 
   Future<void> _cleanupResources() async {
-    print('🧹 FIRST AID: Cleaning up session resources...');
+    print('Cleaning up session resources...');
     try {
       if (_session != null) {
         // Close the session properly to free up resources
-        print('🔚 FIRST AID: Closing session...');
+        print('Closing session...');
         await _session!.close();
         _session = null;
       }
       // Reset state
       _isModelReady = false;
-      print('✅ FIRST AID: Session cleaned up successfully');
+      print('Session cleaned up successfully');
     } catch (e) {
-      print('⚠️ FIRST AID: Error during cleanup: $e');
+      print('Error during cleanup: $e');
     }
   }
 

@@ -119,7 +119,6 @@ class MedicalTriageService {
   Future<DiagnosisState> evaluateWithAI(dynamic session) async {
     try {
       final context = _generateContextForAI();
-      print('📊 CONTEXT LENGTH: ${context.length} chars');
       
       final prompt = '''$context
 
@@ -132,14 +131,13 @@ Need more info? JSON:
       print('=== END PROMPT ===');
       
       // Add the prompt as a message to the session
-      print('📤 TRIAGE: Adding prompt to session...');
       final message = flutter_gemma.Message.text(text: prompt, isUser: true);
       await session.addQueryChunk(message);
-      print('✅ TRIAGE: Prompt added, requesting response...');
+      print('Prompt added, requesting response...');
       
       // Get response from session
       final response = await session.getResponse();
-      print('✅ TRIAGE: Response received from AI');
+      print('Response received from AI');
       
       // Log the raw response received
       print('=== RAW GEMMA RESPONSE ===');
@@ -181,26 +179,22 @@ Need more info? JSON:
         print('=== END PARSED RESULT ===');
         
         final needsMoreInfo = parsed['needs_more_info'] as bool;
-        print('🎯 TRIAGE: AI decision - needs_more_info: $needsMoreInfo');
         
         if (needsMoreInfo) {
-          print('❓ TRIAGE: AI wants more information, generating question...');
           final nextQuestion = parsed['next_question'] as String;
-          print('📝 TRIAGE: Generated question: "$nextQuestion"');
+          print('Generated question: "$nextQuestion"');
           
           // Check if answers exist and log them
           if (parsed['answers'] != null) {
             final answersData = parsed['answers'] as List;
-            print('📋 TRIAGE: Found ${answersData.length} answer options:');
             for (int i = 0; i < answersData.length; i++) {
               final answerObj = answersData[i];
               print('   ${i+1}. "${answerObj['text']}" (severity: ${answerObj['severity']})');
             }
             
             final answers = answersData.map((a) => a['text'] as String).toList();
-            print('📋 TRIAGE: Extracted answers: ${answers.join(", ")}');
           } else {
-            print('❌ TRIAGE: No answers found in AI response!');
+            print('No answers found in AI response!');
           }
           
           final answers = parsed['answers'] != null 
@@ -215,7 +209,7 @@ Need more info? JSON:
           );
         } else {
           // Triage says we have enough info, now consult the expert doctor
-          print('✅ TRIAGE: AI says we have enough info - consulting expert doctor...');
+          print('AI says we have enough info - consulting expert doctor...');
           final expertAssessment = await _consultExpertDoctor(session);
           
           return DiagnosisState(

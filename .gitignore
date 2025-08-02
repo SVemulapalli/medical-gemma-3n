@@ -117,3 +117,6 @@ PRD.md
 
 /evaluation/.venv/
 /evaluation/.env
+
+*.cmake
+*.cc

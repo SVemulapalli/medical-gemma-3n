@@ -23,21 +23,11 @@ class ImageAnalysisService {
 3. Severity assessment 
 4. Recommendations''';
     
-    // Debug the image bytes
-    print('🔍 IMAGE BYTES DEBUG: Length: ${imageBytes.length}');
-    print('🔍 IMAGE BYTES DEBUG: First 10 bytes: ${imageBytes.take(10).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
-    print('🔍 IMAGE BYTES DEBUG: Type: ${imageBytes.runtimeType}');
-    
     final userMessage = flutter_gemma.Message.withImage(
       text: 'Give a full description of what you see in the image',
       imageBytes: imageBytes,
       isUser: true,
     );
-    
-    // Debug the message
-    print('🔍 MESSAGE DEBUG: hasImage: ${userMessage.hasImage}');
-    print('🔍 MESSAGE DEBUG: imageBytes length in message: ${userMessage.imageBytes?.length}');
-    print('🔍 IMAGE ANALYSIS: Sending image with ${imageBytes.length} bytes');
     
     // Add message to chat
     await chat.addQueryChunk(userMessage);
@@ -45,9 +35,6 @@ class ImageAnalysisService {
     // Generate response (like the example)
     final response = await chat.generateChatResponse();
     
-    // Print the response to see what we're getting
-    print('🔍 MODEL RESPONSE TYPE: ${response.runtimeType}');
-    print('🔍 MODEL RESPONSE CONTENT: $response');
     
     // Handle response - check if it has a token property
     try {

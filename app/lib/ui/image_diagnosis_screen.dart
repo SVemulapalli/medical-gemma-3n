@@ -23,8 +23,6 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      print('📸 IMAGE PICKER: Starting image selection from ${source.name}');
-      
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
@@ -33,19 +31,15 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
       );
 
       if (pickedFile != null) {
-        print('📸 IMAGE PICKER: Image selected successfully: ${pickedFile.path}');
         final bytes = await pickedFile.readAsBytes();
         setState(() {
           _selectedImageFile = File(pickedFile.path);
           _selectedImageBytes = bytes;
           _medicalDescription = null;
         });
-        print('📸 IMAGE PICKER: Image bytes loaded: ${bytes.length}');
-      } else {
-        print('📸 IMAGE PICKER: No image selected');
       }
     } catch (e) {
-      print('📸 IMAGE PICKER: Error selecting image: $e');
+      print('Error selecting image: $e');
       
       String errorMessage = 'Error selecting image: $e';
       
@@ -70,18 +64,14 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
     });
 
     try {
-      print('🔍 IMAGE PROCESSING: Starting image analysis...');
-      print('🔍 IMAGE PROCESSING: Image size: ${_selectedImageBytes!.length} bytes');
-      
       // Basic validation
       if (_selectedImageBytes!.isEmpty) {
         throw Exception('Image file is empty');
       }
       
+      
       // Analyze with the medical AI model using the bytes directly
-      print('🤖 AI ANALYSIS: Starting medical analysis...');
       final String analysis = await ImageAnalysisService.analyzeMedicalImage(_selectedImageBytes!);
-      print('🤖 AI ANALYSIS: Analysis completed successfully');
       
       setState(() {
         _medicalDescription = analysis;
@@ -89,7 +79,7 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
       });
 
     } catch (e) {
-      print('❌ IMAGE PROCESSING: Error processing image: $e');
+      print('Error processing image: $e');
       setState(() {
         _isProcessing = false;
       });
@@ -213,8 +203,8 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
             
             const SizedBox(height: 16),
             
-            // Selected image display
-            if (_selectedImageFile != null) ...[
+            // Show analyze button only when image is selected
+            if (_selectedImageFile != null && !_isProcessing && _medicalDescription == null) ...[
               Card(
                 elevation: 4,
                 child: Padding(
@@ -222,33 +212,17 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
                   child: Column(
                     children: [
                       const Text(
-                        'Selected Image',
+                        'Image Selected - Ready to Analyze',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 16),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          _selectedImageFile!,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : _processImage,
-                        icon: _isProcessing 
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.medical_services),
-                        label: Text(_isProcessing ? 'Processing...' : 'Analyze Image'),
+                        onPressed: _processImage,
+                        icon: const Icon(Icons.medical_services),
+                        label: const Text('Analyze Image'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange[600],
                           foregroundColor: Colors.white,
@@ -262,6 +236,48 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
             ],
             
             const SizedBox(height: 16),
+            
+            // Show image being analyzed (before analysis results)
+            if (_isProcessing && _selectedImageBytes != null) ...[
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.psychology, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
+                            'Analyzing Image...',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          _selectedImageBytes!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 8),
+                      const Text('AI is analyzing your medical image...'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             
             // Medical description
             if (_medicalDescription != null) ...[
@@ -312,79 +328,6 @@ class _ImageDiagnosisScreenState extends State<ImageDiagnosisScreen> {
             
             const SizedBox(height: 32),
             
-            // Analysis suggestions
-            if (_selectedImageFile == null) ...[
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.lightbulb, color: Colors.amber),
-                          SizedBox(width: 8),
-                          Text(
-                            'What can I analyze?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: ImageAnalysisService.getAnalysisSuggestions()
-                            .map((suggestion) => Chip(
-                                  label: Text(
-                                    suggestion,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  backgroundColor: Colors.blue[50],
-                                  side: BorderSide(color: Colors.blue[200]!),
-                                ))
-                            .toList(),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            
-            // Disclaimer
-            Card(
-              color: Colors.orange[50],
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Text(
-                          'Medical Disclaimer',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'This AI analysis is for educational purposes only and should not replace professional medical consultation. Always consult a healthcare professional for accurate diagnosis and treatment.',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),

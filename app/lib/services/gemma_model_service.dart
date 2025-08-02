@@ -1,6 +1,7 @@
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/core/message.dart' as flutter_gemma;
 import 'package:flutter_gemma/core/model.dart';
+import 'package:flutter_gemma/pigeon.g.dart';
 import '../data/gemma_downloader_datasource.dart';
 
 /// Singleton service to manage the Gemma model globally
@@ -22,12 +23,10 @@ class GemmaModelService {
   /// Get the model instance (initialize if needed)
   Future<dynamic> getModel() async {
     if (isReady) {
-      print('🔄 GEMMA SERVICE: Model already ready, returning existing instance');
       return _inferenceModel;
     }
 
     if (_isInitializing) {
-      print('⏳ GEMMA SERVICE: Model is initializing, waiting...');
       // Wait for initialization to complete
       while (_isInitializing) {
         await Future.delayed(const Duration(milliseconds: 100));
@@ -43,32 +42,29 @@ class GemmaModelService {
     if (isReady) return _inferenceModel;
 
     _isInitializing = true;
-    print('🚀 GEMMA SERVICE: Initializing model for the first time...');
 
     try {
       // Set the model path
-      print('📁 GEMMA SERVICE: Setting model path...');
       await _downloaderDataSource.setModelPath();
 
       // Create the model instance
-      print('🤖 GEMMA SERVICE: Creating Gemma model...');
       final gemma = FlutterGemmaPlugin.instance;
       
       _inferenceModel = await gemma.createModel(
         modelType: ModelType.gemmaIt,
+        preferredBackend: PreferredBackend.gpu,
         supportImage: true,
-        maxTokens: 2048,
+        maxTokens: 4096,
       );
 
       _isInitialized = true;
       _isInitializing = false;
       
-      print('✅ GEMMA SERVICE: Model initialized successfully');
       return _inferenceModel;
       
     } catch (e) {
       _isInitializing = false;
-      print('💥 GEMMA SERVICE: Model initialization failed: $e');
+      print('Model initialization failed: $e');
       throw Exception('Failed to initialize Gemma model: $e');
     }
   }
@@ -81,7 +77,6 @@ class GemmaModelService {
     bool enableVisionModality = false,
   }) async {
     final model = await getModel();
-    print('📝 GEMMA SERVICE: Creating new session...');
     
     final session = await model.createSession(
       enableVisionModality: enableVisionModality, // Enable image processing if requested
@@ -90,7 +85,6 @@ class GemmaModelService {
       topK: topK,
     );
     
-    print('✅ GEMMA SERVICE: Session created successfully');
     return session;
   }
 
@@ -99,24 +93,20 @@ class GemmaModelService {
     bool supportImage = false,
   }) async {
     final model = await getModel();
-    print('💬 GEMMA SERVICE: Creating new chat...');
     
     final chat = await model.createChat(
       supportImage: supportImage
     );
     
-    print('✅ GEMMA SERVICE: Chat created successfully');
     return chat;
   }
 
   /// Dispose of the model (should only be called when app is closing)
   Future<void> dispose() async {
     if (_inferenceModel != null) {
-      print('🧹 GEMMA SERVICE: Disposing model...');
       await _inferenceModel!.close();
       _inferenceModel = null;
       _isInitialized = false;
-      print('✅ GEMMA SERVICE: Model disposed');
     }
   }
 }
